@@ -25,7 +25,7 @@ def get_model(model):
     torch.nn.init.normal_ = skip
     from transformers import AutoModelForCausalLM
 
-    model = AutoModelForCausalLM.from_pretrained(model)
+    model = AutoModelForCausalLM.from_pretrained(model, torch_dtype="auto")
     model.seqlen = 2048
     return model
 

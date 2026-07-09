@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, LlamaForCausalLM, OPTForCausalLM
+from transformers import AutoModelForCausalLM, OPTForCausalLM
 
 
 def load_model(model, model_type, cache_dir=None):
@@ -10,17 +10,24 @@ def load_model(model, model_type, cache_dir=None):
             trust_remote_code=True,
         )
     else:
-        model = LlamaForCausalLM.from_pretrained(
-            model, torch_dtype="auto", cache_dir=cache_dir
+        model = AutoModelForCausalLM.from_pretrained(
+            model,
+            torch_dtype="auto",
+            cache_dir=cache_dir,
         )
     return model
 
 
 def parse_model(model):
-    if "opt" in str(type(model)).lower():
+    model_type_name = getattr(getattr(model, "config", None), "model_type", "")
+    model_type_name = str(model_type_name).lower()
+
+    if model_type_name == "opt" or "opt" in str(type(model)).lower():
         model_type = "opt"
-    elif "mistral" in str(type(model)).lower():
+    elif model_type_name == "mistral" or "mistral" in str(type(model)).lower():
         model_type = "mistral"
+    elif "llama" in model_type_name or "llama" in str(type(model)).lower():
+        model_type = "llama"
     else:
         # additional rules should be added to support other models
         model_type = "llama"
