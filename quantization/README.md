@@ -16,8 +16,11 @@ Additionally, make sure you have your own LLaMA Huggingface checkpoint saved at 
 
 ### 1. Compute gradients (Fisher-based sensitivity score)
 SqueezeLLM employs the Fisher Information matrix as a sensitivity metric.
-To compute this, we offer a separate [separate framework](https://github.com/kssteven418/SqueezeLLM-gradients) where you can compute the gradient square for your target model. 
-This framework will produce the gradient square in the same format as the original Huggingface model checkpoint for your target model, with the only difference being that the weight values are replaced by the gradient square.
+You can now compute gradient-square chunks directly in this repo:
+```
+python collect_gradients.py --model [MODEL_PATH] --dataset c4 --nsamples 128 --output [GRADIENT_CHUNKS_PATH]
+```
+This command saves gradient-square statistics in the same layer-chunked format used by the rest of the pipeline.
 
 ### 2. Chunk model weights and gradients
 You should now have the model checkpoint at `[MODEL_PATH]` and the gradient checkpoint computed in the previous step at `[GRADIENT_PATH]`. 
@@ -25,10 +28,9 @@ Our framework requires that both checkpoints are chunked at the layer granularit
 Run the following code to chunk both your model and gradient checkpoints:
 ```
 python chunk_models.py --model [MODEL_PATH] --output [MODEL_CHUNKS_PATH] --model_type llama
-python chunk_models.py --model [GRADIENT_PATH] --output [GRADIENT_CHUNKS_PATH] --model_type llama
 ```
 
-This will save model weights and gradients in the layer granularity as `[MODEL_CHUNKS_PATH]` and `[GRADIENT_CHUNKS_PATH]`.
+This will save model weights in the layer granularity as `[MODEL_CHUNKS_PATH]`. If you used `collect_gradients.py` in step 1, your gradients are already saved in layer-chunked format at `[GRADIENT_CHUNKS_PATH]`.
 
 ### 3. (Optional for D+S quantization) Outlier configuration generation
 This is an optional step to generate an outlier configuration for the Dense-and-Sparse quantization.

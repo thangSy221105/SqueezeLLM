@@ -6,6 +6,7 @@ import time
 import torch
 import torch.nn as nn
 import transformers
+from squeezellm.model_parse import get_layers_name, parse_model
 from squeezellm.modelutils import *
 from squeezellm.quant import *
 
@@ -14,7 +15,11 @@ from squeezellm.quant import *
 def llama_sequential(model, folder, include_sparse):
     print("Starting ...")
 
-    layers = model.model.layers
+    model_type = parse_model(model)
+    layers_name = get_layers_name(model_type)
+    layers = model
+    for attr in layers_name.split("."):
+        layers = getattr(layers, attr)
 
     quantizers = {}
     for i in range(len(layers)):
@@ -52,7 +57,7 @@ def llama_sequential(model, folder, include_sparse):
             else:
                 outliers = None
             name = sequential_lut_real_name[s]
-            quantizers["model.layers.%d.%s" % (i, name)] = [lut, outliers]
+            quantizers[f"{layers_name}.{i}.{name}"] = [lut, outliers]
 
     return quantizers
 

@@ -15,6 +15,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--output_path", type=str, default=None, help="chunk the model and store"
 )
+parser.add_argument(
+    "--output", dest="output_path", type=str, help="alias of --output_path"
+)
 parser.add_argument("--model", type=str, help="model to load")
 parser.add_argument(
     "--model_type",
@@ -31,6 +34,8 @@ model_type = args.model_type or parse_model(args.model)
 # This path is only taken when we want to chunk the model and store it,
 # which is used when '--output_path' is passed as an argument.
 print(f"chunking the model: {args.model} and storing in {args.output_path}")
+if args.output_path is None:
+    raise ValueError("Please provide --output_path (or --output).")
 if not os.path.exists(args.output_path):
     os.makedirs(args.output_path)
 model = load_model(args.model, model_type)

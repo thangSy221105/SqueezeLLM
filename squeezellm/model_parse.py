@@ -19,14 +19,29 @@ def load_model(model, model_type, cache_dir=None):
 
 
 def parse_model(model):
+    model_name = str(model).lower()
     model_type_name = getattr(getattr(model, "config", None), "model_type", "")
     model_type_name = str(model_type_name).lower()
 
-    if model_type_name == "opt" or "opt" in str(type(model)).lower():
+    if (
+        model_type_name == "opt"
+        or "opt" in str(type(model)).lower()
+        or "opt" in model_name
+    ):
         model_type = "opt"
-    elif model_type_name == "mistral" or "mistral" in str(type(model)).lower():
+    elif (
+        model_type_name == "mistral"
+        or "mistral" in str(type(model)).lower()
+        or "mistral" in model_name
+    ):
         model_type = "mistral"
-    elif "llama" in model_type_name or "llama" in str(type(model)).lower():
+    elif (
+        "llama" in model_type_name
+        or "llama" in str(type(model)).lower()
+        or "llama" in model_name
+        or "vicuna" in model_name
+        or "xgen" in model_name
+    ):
         model_type = "llama"
     else:
         # additional rules should be added to support other models

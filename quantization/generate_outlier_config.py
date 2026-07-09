@@ -11,7 +11,11 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--model", type=str, help="llama model to load")
 parser.add_argument(
-    "--model_type", type=str, default=None, help="model type", choices=["llama", "opt"]
+    "--model_type",
+    type=str,
+    default=None,
+    help="model type",
+    choices=["llama", "opt", "mistral"],
 )
 parser.add_argument("--cache_dir", type=str, default=None, help="cache directory")
 parser.add_argument(
@@ -22,6 +26,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_folder", type=str, required=None, help="path to dump the output"
+)
+parser.add_argument(
+    "--output", dest="output_folder", type=str, help="alias of --output_folder"
 )
 
 args = parser.parse_args()
@@ -65,6 +72,8 @@ for l in tqdm(range(nlayers)):
 outlier_percentage = total_outliers / total_params * 100
 
 outlier_folder = f"{args.output_folder}"
+if args.output_folder is None:
+    raise ValueError("Please provide --output_folder (or --output).")
 if not os.path.exists(outlier_folder):
     os.makedirs(outlier_folder)
 

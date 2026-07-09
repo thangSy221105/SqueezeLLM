@@ -25,8 +25,10 @@ def get_model(model):
     torch.nn.init.normal_ = skip
     from transformers import AutoModelForCausalLM
 
-    model = AutoModelForCausalLM.from_pretrained(model, torch_dtype="auto")
-    model.seqlen = 2048
+    model = AutoModelForCausalLM.from_pretrained(
+        model, torch_dtype="auto", trust_remote_code=True
+    )
+    model.seqlen = min(getattr(model.config, "max_position_embeddings", 2048), 2048)
     return model
 
 
@@ -134,23 +136,10 @@ def llama_eval(model, testenc, dev):
 
 # loading quantized checkpoint
 def load_quant(model, checkpoint, wbits, include_sparse, topX):
-    if (
-        "xgen" in checkpoint
-        or "opt" in checkpoint
-        or ("vicuna" in checkpoint and "v1.3" in checkpoint)
-        or "llama-2" in checkpoint
-        or "mistral" in checkpoint
-    ):
-        # TODO: this is a hacky solution, will be preperly implemented after all the model checkpoints are updated with
-        # the new packing scheme that includes the non-linear weights
-        from transformers import AutoConfig, AutoModelForCausalLM
+    from transformers import AutoConfig, AutoModelForCausalLM
 
-        config = AutoConfig.from_pretrained(model)
-        model = AutoModelForCausalLM.from_config(config)
-    else:
-        from transformers import LlamaForCausalLM
-
-        model = LlamaForCausalLM.from_pretrained(model, torch_dtype="auto")
+    config = AutoConfig.from_pretrained(model, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     model = model.eval()
     layers = find_layers(model)
 
@@ -180,7 +169,7 @@ def load_quant(model, checkpoint, wbits, include_sparse, topX):
     print("Loading model ...")
     state_dict = torch.load(checkpoint)
     model.load_state_dict(state_dict, strict=False)
-    model.seqlen = 2048
+    model.seqlen = min(getattr(model.config, "max_position_embeddings", 2048), 2048)
     print("Done.")
 
     return model

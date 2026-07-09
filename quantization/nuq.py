@@ -17,7 +17,11 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--model", type=str, help="model weights to load", required=True)
 parser.add_argument(
-    "--model_type", type=str, default=None, help="model type", choices=["llama", "opt"]
+    "--model_type",
+    type=str,
+    default=None,
+    help="model type",
+    choices=["llama", "opt", "mistral"],
 )
 parser.add_argument(
     "--gradient", type=str, help="model gradients to load", required=True
@@ -34,6 +38,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_folder", type=str, required=None, help="path to dump the output"
+)
+parser.add_argument(
+    "--output", dest="output_folder", type=str, help="alias of --output_folder"
 )
 parser.add_argument(
     "--outlier_config",
@@ -66,6 +73,8 @@ if __name__ == "__main__":
 
     # Run as a outlier extraction mode if outlier config is given or sensitivity is non-zero
     is_outlier_mode = args.outlier_config is not None or args.sensitivity > 0
+    if args.output_folder is None:
+        raise ValueError("Please provide --output_folder (or --output).")
 
     if args.outlier_config is not None:
         # load json file
