@@ -68,6 +68,7 @@ def main():
     model.seqlen = min(getattr(model.config, "max_position_embeddings", 2048), args.seqlen)
     model.to(device)
     model.eval()
+    model.config.use_cache = False
 
     trainloader, _ = get_loaders(
         args.dataset,
@@ -83,7 +84,9 @@ def main():
     for layer in layers:
         layer_stats = {}
         for module, name in zip(get_modules(layer, model_type), module_names):
-            layer_stats[name] = torch.zeros_like(module.weight, dtype=torch.float32)
+            layer_stats[name] = torch.zeros(
+                module.weight.shape, dtype=torch.float32, device="cpu"
+            )
         grad_squares.append(layer_stats)
 
     print(f"Collecting gradient-square statistics from {len(trainloader)} samples")

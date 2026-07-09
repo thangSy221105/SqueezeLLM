@@ -7,6 +7,17 @@ def set_seed(seed):
     torch.random.manual_seed(seed)
 
 
+def _get_tokenizer(model):
+    from transformers import AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model, use_fast=False, trust_remote_code=True
+    )
+    # Avoid warnings when building long contiguous corpora for random slicing.
+    tokenizer.model_max_length = int(1e30)
+    return tokenizer
+
+
 def get_wikitext2(nsamples, seed, seqlen, model):
     from datasets import load_dataset
 
@@ -17,11 +28,7 @@ def get_wikitext2(nsamples, seed, seqlen, model):
         "Salesforce/wikitext", "wikitext-2-raw-v1", split="test"
     )
 
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model, use_fast=False, trust_remote_code=True
-    )
+    tokenizer = _get_tokenizer(model)
     trainenc = tokenizer("\n\n".join(traindata["text"]), return_tensors="pt")
     testenc = tokenizer("\n\n".join(testdata["text"]), return_tensors="pt")
 
@@ -45,11 +52,7 @@ def get_ptb(nsamples, seed, seqlen, model):
     traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
     valdata = load_dataset("ptb_text_only", "penn_treebank", split="validation")
 
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model, use_fast=False, trust_remote_code=True
-    )
+    tokenizer = _get_tokenizer(model)
     trainenc = tokenizer("\n\n".join(traindata["sentence"]), return_tensors="pt")
     testenc = tokenizer("\n\n".join(valdata["sentence"]), return_tensors="pt")
 
@@ -81,11 +84,7 @@ def get_c4(nsamples, seed, seqlen, model):
         split="validation",
     )
 
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model, use_fast=False, trust_remote_code=True
-    )
+    tokenizer = _get_tokenizer(model)
 
     import random
 
@@ -134,11 +133,7 @@ def get_ptb_new(nsamples, seed, seqlen, model):
     traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
     testdata = load_dataset("ptb_text_only", "penn_treebank", split="test")
 
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model, use_fast=False, trust_remote_code=True
-    )
+    tokenizer = _get_tokenizer(model)
     trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
     testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
 
@@ -170,11 +165,7 @@ def get_c4_new(nsamples, seed, seqlen, model):
         split="validation",
     )
 
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model, use_fast=False, trust_remote_code=True
-    )
+    tokenizer = _get_tokenizer(model)
 
     import random
 
