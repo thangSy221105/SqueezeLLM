@@ -258,6 +258,7 @@ if __name__ == "__main__":
                 benchmark(model, input_ids, check=args.check)
 
     if args.eval:
+        model = model.to(DEV)
         datasets = ["wikitext2", "c4"]
         for dataset in datasets:
             dataloader, testloader = get_loaders(
