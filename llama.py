@@ -35,103 +35,17 @@ def get_model(model):
 @torch.no_grad()
 def llama_eval(model, testenc, dev):
     print("Evaluating ...")
-    model_type = parse_model(model)
-
     testenc = testenc.input_ids
     nsamples = testenc.numel() // model.seqlen
-
-    use_cache = model.config.use_cache
-    model.config.use_cache = False
-    layers = get_layers(model, model_type)
-    embeddings = get_embedding(model, model_type)
-    for i in range(len(embeddings)):
-        embeddings[i] = embeddings[i].to(dev)
-
-    layers[0] = layers[0].to(dev)
-
-    dtype = next(iter(model.parameters())).dtype
-    inps = torch.zeros(
-        (nsamples, model.seqlen, model.config.hidden_size), dtype=dtype, device=dev
-    )
-    cache = {"i": 0, "attention_mask": None}
-
-    class Catcher(nn.Module):
-        def __init__(self, module):
-            super().__init__()
-            self.module = module
-
-        def forward(self, inp, **kwargs):
-            inps[cache["i"]] = inp
-            cache["i"] += 1
-            cache["attention_mask"] = kwargs["attention_mask"]
-            if "position_ids" in kwargs:
-                cache["position_ids"] = kwargs["position_ids"]
-            raise ValueError
-
-    layers[0] = Catcher(layers[0])
-    for i in range(nsamples):
-        batch = testenc[:, (i * model.seqlen) : ((i + 1) * model.seqlen)].to(dev)
-        try:
-            model(batch)
-        except ValueError:
-            pass
-    layers[0] = layers[0].module
-
-    layers[0] = layers[0].cpu()
-    for i in range(len(embeddings)):
-        embeddings[i] = embeddings[i].cpu()
-    torch.cuda.empty_cache()
-
-    outs = torch.zeros_like(inps)
-    attention_mask = cache["attention_mask"]
-    position_ids = cache.get("position_ids")
-
-    for i in range(len(layers)):
-        print("Layer", i)
-        layer = layers[i].to(dev)
-
-        for j in range(nsamples):
-            if model_type == "opt":
-                outs[j] = layer(
-                    inps[j].unsqueeze(0),
-                    attention_mask=attention_mask,
-                )[0]
-            else:
-                assert model_type in ("llama", "mistral")
-                outs[j] = layer(
-                    inps[j].unsqueeze(0),
-                    attention_mask=attention_mask,
-                    position_ids=position_ids,
-                )[0]
-        layers[i] = layer.cpu()
-        del layer
-        torch.cuda.empty_cache()
-        inps, outs = outs, inps
-
-    norm = get_norm(model, model_type)
-    if norm is not None:
-        norm = norm.to(dev)
-    model.lm_head = model.lm_head.to(dev)
-
-    testenc = testenc.to(dev)
     nlls = []
     for i in range(nsamples):
-        hidden_states = inps[i].unsqueeze(0)
-        if norm is not None:
-            hidden_states = norm(hidden_states)
-        lm_logits = model.lm_head(hidden_states)
-        shift_logits = lm_logits[:, :-1, :].contiguous()
-        shift_labels = testenc[:, (i * model.seqlen) : ((i + 1) * model.seqlen)][:, 1:]
-        loss_fct = nn.CrossEntropyLoss()
-        loss = loss_fct(
-            shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)
-        )
-        neg_log_likelihood = loss.float() * model.seqlen
+        print("Sample", i)
+        batch = testenc[:, (i * model.seqlen) : ((i + 1) * model.seqlen)].to(dev)
+        outputs = model(input_ids=batch, labels=batch, use_cache=False)
+        neg_log_likelihood = outputs.loss.float() * (batch.shape[1] - 1)
         nlls.append(neg_log_likelihood)
-    ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * model.seqlen))
+    ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * (model.seqlen - 1)))
     print(ppl.item())
-
-    model.config.use_cache = use_cache
 
 
 # loading quantized checkpoint
