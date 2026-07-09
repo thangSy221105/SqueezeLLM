@@ -64,7 +64,7 @@ for l in tqdm(range(nlayers)):
         total_outliers += num_outliers
 
         print(l, name, f"% outlier: {num_outliers / num_params * 100:.3f}%")
-        layer_json[name] = maximum
+        layer_json[name] = float(maximum)
 
     json_data.append(layer_json)
 
@@ -77,7 +77,7 @@ if args.output_folder is None:
 if not os.path.exists(outlier_folder):
     os.makedirs(outlier_folder)
 
-o = round(outlier_percentage, 2)
+o = float(round(outlier_percentage, 2))
 json_data = {
     "outlier_threshold": o,
     "outlier_config": json_data,
