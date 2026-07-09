@@ -50,7 +50,7 @@ for l in tqdm(range(nlayers)):
 
     for name in get_module_names(model_type):
         module_weight = model_layer[name]
-        weights_np = module_weight.detach().numpy()
+        weights_np = module_weight.detach().float().cpu().numpy()
         q1 = np.quantile(weights_np, 0.25)
         q3 = np.quantile(weights_np, 0.75)
         minimum = q1 - threshold_range * (q3 - q1)
