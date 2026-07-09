@@ -96,7 +96,8 @@ def get_c4(nsamples, seed, seqlen, model):
             trainenc = tokenizer(traindata[i]["text"], return_tensors="pt")
             if trainenc.input_ids.shape[1] >= seqlen:
                 break
-        i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        max_start = trainenc.input_ids.shape[1] - seqlen
+        i = 0 if max_start == 0 else random.randint(0, max_start)
         j = i + seqlen
         inp = trainenc.input_ids[:, i:j]
         tar = inp.clone()
@@ -113,7 +114,8 @@ def get_c4(nsamples, seed, seqlen, model):
             tmp = tokenizer(valdata[i]["text"], return_tensors="pt")
             if tmp.input_ids.shape[1] >= seqlen:
                 break
-        i = random.randint(0, tmp.input_ids.shape[1] - seqlen - 1)
+        max_start = tmp.input_ids.shape[1] - seqlen
+        i = 0 if max_start == 0 else random.randint(0, max_start)
         j = i + seqlen
         valenc.append(tmp.input_ids[:, i:j])
     valenc = torch.hstack(valenc)
@@ -177,7 +179,8 @@ def get_c4_new(nsamples, seed, seqlen, model):
             trainenc = tokenizer(traindata[i]["text"], return_tensors="pt")
             if trainenc.input_ids.shape[1] >= seqlen:
                 break
-        i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        max_start = trainenc.input_ids.shape[1] - seqlen
+        i = 0 if max_start == 0 else random.randint(0, max_start)
         j = i + seqlen
         inp = trainenc.input_ids[:, i:j]
         tar = inp.clone()

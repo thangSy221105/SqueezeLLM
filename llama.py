@@ -259,9 +259,7 @@ if __name__ == "__main__":
 
     if args.eval:
         model = model.to(DEV)
-        datasets = ["wikitext2", "c4"]
-        for dataset in datasets:
-            dataloader, testloader = get_loaders(
-                dataset, seed=args.seed, model=args.model, seqlen=model.seqlen
-            )
-            llama_eval(model, testloader, DEV)
+        dataloader, testloader = get_loaders(
+            args.dataset, seed=args.seed, model=args.model, seqlen=model.seqlen
+        )
+        llama_eval(model, testloader, DEV)
