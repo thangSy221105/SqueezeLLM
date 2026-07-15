@@ -39,8 +39,8 @@ class QuantLinearLUT(nn.Module):
         num_nonzero_per_thread=10,
     ):
         super().__init__()
-        if bits not in [3, 4]:
-            raise NotImplementedError("Only 3 and 4 bits is supported.")
+        if bits not in [3, 4, 8]:
+            raise NotImplementedError("Only 3, 4, and 8 bits are supported.")
         self.infeatures = infeatures
         self.outfeatures = outfeatures
         self.bits = bits
@@ -93,6 +93,43 @@ class QuantLinearLUT(nn.Module):
                 "startrows", torch.zeros(self.num_threads, dtype=torch.int32)
             )
             print("self.num_threads : ", self.num_threads)
+
+    def _dequantize_qweight(self):
+        if self.bits != 8:
+            raise NotImplementedError("Dense fallback is only implemented for 8-bit.")
+
+        packed = self.qweight.to(torch.int64).t().contiguous()
+        indices = torch.empty(
+            (packed.shape[0], packed.shape[1] * 4),
+            dtype=torch.long,
+            device=packed.device,
+        )
+        for offset in range(4):
+            indices[:, offset::4] = (packed >> (8 * offset)) & 0xFF
+
+        indices = indices[:, : self.infeatures]
+        lut = self.lookup_table.to(packed.device)
+        weight = torch.gather(lut, 1, indices).to(torch.float32)
+        return weight
+
+    def _dense_fallback_matmul(self, x):
+        weight = self._dequantize_qweight()
+        y = x.to(torch.float32).matmul(weight.t())
+
+        if self.include_sparse and self.numvals > 0:
+            sparse = torch.sparse_csr_tensor(
+                self.rows,
+                self.cols,
+                self.vals,
+                size=(self.outfeatures, self.infeatures),
+                device=x.device,
+            )
+            y = y + x.to(torch.float32).matmul(sparse.transpose(0, 1).to_dense())
+
+        if self.bias is not None:
+            y = y + self.bias.to(y.device, dtype=y.dtype)
+
+        return y
 
     def pack2(self, linear, lookup_table, include_sparse, num_nonzero_per_thread=-1):
         if self.include_bias:  # linear.bias is not None:
@@ -210,6 +247,10 @@ class QuantLinearLUT(nn.Module):
     # replacement forward pass
     def forward(self, x):
         if x.shape[-1] == x.numel():
+            if self.bits == 8:
+                out = self._dense_fallback_matmul(x.reshape(1, -1)).reshape(-1)
+                return out.to(x.dtype)
+
             outshape = list(x.shape)
             if self.bias is not None:
                 y = self.bias.clone()
@@ -311,6 +352,11 @@ class QuantLinearLUT(nn.Module):
             y = y.to(dtype)
             return y.reshape(outshape)
         else:
+            if self.bits == 8:
+                out_shape = x.shape[:-1] + (self.outfeatures,)
+                out = self._dense_fallback_matmul(x.reshape(-1, x.shape[-1]))
+                return out.to(x.dtype).reshape(out_shape)
+
             out_shape = x.shape[:-1] + (self.outfeatures,)
             x = x.reshape(-1, x.shape[-1])
             out = torch.zeros(
