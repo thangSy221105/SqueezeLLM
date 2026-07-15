@@ -31,7 +31,7 @@ parser.add_argument(
     type=int,
     default=3,
     help="bitwidth",
-    choices=[3, 4],
+    choices=[3, 4, 8],
 )
 parser.add_argument(
     "--range", type=str, default=None, help="range of layers to quantize"
@@ -62,7 +62,10 @@ def kmeans_fit(row_data):
         n_init="auto",
         max_iter=50,
     ).fit(weights_np, sample_weight=sample_weight)
-    return kmeans.cluster_centers_.reshape(-1), np.asarray(kmeans.labels_, dtype=np.int8)
+    label_dtype = np.uint8 if n_cluster > 128 else np.int8
+    return kmeans.cluster_centers_.reshape(-1), np.asarray(
+        kmeans.labels_, dtype=label_dtype
+    )
 
 
 if __name__ == "__main__":
